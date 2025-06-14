@@ -2,11 +2,11 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Espelho de Vendas - Revenda</title>
+  <title>Espelho de Revenda</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    select { margin-bottom: 20px; padding: 5px; }
+    select { padding: 5px; }
 
     #container { display: flex; flex-direction: column; gap: 10px; }
 
@@ -30,7 +30,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
-      margin-bottom: 20px;
+      margin-top: 10px;
     }
     .status-item {
       display: flex;
@@ -74,9 +74,8 @@
   </style>
 </head>
 <body>
-  
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo da Empresa" style="height: 60px;">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo da Empresa" style="height: 80px;">
     <h1 style="
       margin: 0;
       font-size: 32px;
@@ -86,30 +85,37 @@
       flex: 1;
       text-align: center;
     ">
-      Espelho de Venda - Revenda
+      Espelho de Revenda
     </h1>
   </div>
 
-  <select id="empreendimentoSelect"></select>
-  <div id="resumoStatus"></div>
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <select id="empreendimentoSelect" style="width: 220px; padding: 6px;"></select>
 
-  <div id="filtrosStatus" style="margin-bottom: 20px;">
-    <label><input type="checkbox" value="vendida" checked> Vendida</label>
-    <label><input type="checkbox" value="revenda" checked> Revenda</label>
-    <label><input type="checkbox" value="negociacao" checked> Negociação</label>
+      <div id="filtrosStatus">
+        <label><input type="checkbox" value="vendida" checked> Vendida</label>
+        <label><input type="checkbox" value="revenda" checked> Revenda</label>
+        <label><input type="checkbox" value="negociacao" checked> Negociação</label>
+      </div>
+
+      <div id="resumoStatus"></div>
+    </div>
+
+    <div style="min-width: 180px; text-align: right;">
+      <button onclick="exportarParaPDF()" style="padding: 5px 20px;">📄 Exportar PDF</button>
+    </div>
   </div>
-
-  <button onclick="exportarParaPDF()" style="margin-bottom: 20px;">📄 Exportar Espelho em PDF</button>
 
   <div id="container"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
     async function carregarEmpreendimentos() {
-      const res = await fetch('http://127.0.0.1:5000/api/empreendimentos');
+      const res = await fetch('/api/empreendimentos');
       const lista = await res.json();
       const select = document.getElementById('empreendimentoSelect');
-      select.innerHTML = '';
+      select.innerHTML = '<option value="" disabled selected hidden>Selecione um empreendimento</option>';
 
       lista.forEach(nome => {
         const opt = document.createElement('option');
@@ -118,13 +124,17 @@
         select.appendChild(opt);
       });
 
-      carregarEspelho(lista[0]);
+      select.addEventListener('change', () => {
+        carregarEspelho(select.value);
+      });
 
       document.querySelectorAll('#filtrosStatus input').forEach(cb => {
         cb.addEventListener('change', () => {
           carregarEspelho(select.value);
         });
       });
+
+      // carregarEspelho(lista[0]);
     }
 
     function getStatusSelecionados() {
@@ -134,7 +144,7 @@
 
     async function carregarEspelho(nome) {
       try {
-        const res = await fetch(`http://127.0.0.1:5000/api/espelho/${encodeURIComponent(nome)}`);
+        const res = await fetch(`/api/espelho/${encodeURIComponent(nome)}`);
         const unidades = await res.json();
         const container = document.getElementById('container');
         container.innerHTML = '';
@@ -180,7 +190,7 @@
 
           unidadesDoAndar.forEach(u => {
             const statusRaw = u.Status || 'indefinido';
-            const status = statusRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const status = statusRaw.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
             if (!selecionados.includes(status)) return;
 
             const div = document.createElement('div');
@@ -194,6 +204,8 @@
               </div>
               <div class="tooltip-popup">
                 <strong>Unidade:</strong> ${u.Unidade}<br>
+                <strong>Tipo:</strong> ${u.Tipo || '-'}<br>
+                <strong>Planta:</strong> ${u.Planta || '-'}<br>
                 <strong>Metragem:</strong> ${u.Metragem?.toFixed(2)} m²<br>
                 <strong>Valor:</strong> R$ ${parseFloat(u.Valor || 0).toLocaleString('pt-BR')}<br>
                 <strong>Link:</strong> <a href="${u.Link}" target="_blank">${u.Link}</a>
@@ -227,7 +239,6 @@
       const card = e.target.closest('.card');
       const allPopups = document.querySelectorAll('.tooltip-popup');
 
-      // Se clicou fora de qualquer card, fecha todos
       if (!card) {
         allPopups.forEach(p => p.style.display = 'none');
         return;
@@ -236,12 +247,10 @@
       const popup = card.querySelector('.tooltip-popup');
       if (!popup) return;
 
-      // Fecha todos os outros
       allPopups.forEach(p => {
         if (p !== popup) p.style.display = 'none';
       });
 
-      // Toggle do atual
       popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
     });
 
