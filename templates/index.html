@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Espelho de Vendas - Revenda</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    select { margin-bottom: 20px; padding: 5px; }
+
+    #container { display: flex; flex-direction: column; gap: 10px; }
+
+    .linha { display: grid; grid-template-columns: 50px 1fr; align-items: center; }
+    .andar-label { font-weight: bold; text-align: right; padding-right: 10px; }
+    .unidades { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+
+    .card {
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      color: white;
+      position: relative;
+      cursor: pointer;
+    }
+    .vendida { background-color: rgb(255, 51, 51); }
+    .negociacao { background-color: rgb(207, 207, 0); }
+    .revenda { background-color: rgb(71, 180, 117); }
+
+    .status-resumo {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      font-weight: bold;
+      gap: 6px;
+    }
+    .status-quad {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    .status-vendida { background-color: rgb(255, 51, 51); }
+    .status-negociacao { background-color: rgb(207, 207, 0); }
+    .status-revenda { background-color: rgb(71, 180, 117); }
+
+    .tooltip-popup {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      z-index: 10;
+      min-width: 200px;
+      max-width: 260px;
+      font-size: 12px;
+      white-space: normal;
+      text-align: left;
+    }
+
+    .tooltip-popup a {
+      color: #1abc9c;
+      text-decoration: underline;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo da Empresa" style="height: 60px;">
+    <h1 style="
+      margin: 0;
+      font-size: 32px;
+      font-weight: 800;
+      color: #2c3e50;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+      flex: 1;
+      text-align: center;
+    ">
+      Espelho de Venda - Revenda
+    </h1>
+  </div>
+
+  <select id="empreendimentoSelect"></select>
+  <div id="resumoStatus"></div>
+
+  <div id="filtrosStatus" style="margin-bottom: 20px;">
+    <label><input type="checkbox" value="vendida" checked> Vendida</label>
+    <label><input type="checkbox" value="revenda" checked> Revenda</label>
+    <label><input type="checkbox" value="negociacao" checked> Negociação</label>
+  </div>
+
+  <button onclick="exportarParaPDF()" style="margin-bottom: 20px;">📄 Exportar Espelho em PDF</button>
+
+  <div id="container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    async function carregarEmpreendimentos() {
+      const res = await fetch('http://127.0.0.1:5000/api/empreendimentos');
+      const lista = await res.json();
+      const select = document.getElementById('empreendimentoSelect');
+      select.innerHTML = '';
+
+      lista.forEach(nome => {
+        const opt = document.createElement('option');
+        opt.value = nome;
+        opt.textContent = nome;
+        select.appendChild(opt);
+      });
+
+      carregarEspelho(lista[0]);
+
+      document.querySelectorAll('#filtrosStatus input').forEach(cb => {
+        cb.addEventListener('change', () => {
+          carregarEspelho(select.value);
+        });
+      });
+    }
+
+    function getStatusSelecionados() {
+      const checkboxes = document.querySelectorAll('#filtrosStatus input[type="checkbox"]');
+      return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+    }
+
+    async function carregarEspelho(nome) {
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/api/espelho/${encodeURIComponent(nome)}`);
+        const unidades = await res.json();
+        const container = document.getElementById('container');
+        container.innerHTML = '';
+
+        const contagem = {};
+        unidades.forEach(u => {
+          const status = (u.Status || 'Indefinido').toUpperCase();
+          contagem[status] = (contagem[status] || 0) + 1;
+        });
+
+        const resumoDiv = document.getElementById('resumoStatus');
+        resumoDiv.innerHTML = `
+          <div class="status-resumo">
+            <div class="status-item"><div class="status-quad status-vendida"></div>Vendida: ${contagem['VENDIDA'] || 0}</div>
+            <div class="status-item"><div class="status-quad status-revenda"></div>Revenda: ${contagem['REVENDA'] || 0}</div>
+            <div class="status-item"><div class="status-quad status-negociacao"></div>Negociação: ${contagem['NEGOCIACAO'] || 0}</div>
+          </div>
+        `;
+
+        const porAndar = {};
+        unidades.forEach(u => {
+          const andar = u.Andar;
+          if (!porAndar[andar]) porAndar[andar] = [];
+          porAndar[andar].push(u);
+        });
+
+        const andares = Object.keys(porAndar).sort((a, b) => b - a);
+
+        andares.forEach(andar => {
+          const linha = document.createElement('div');
+          linha.className = 'linha';
+
+          const label = document.createElement('div');
+          label.className = 'andar-label';
+          label.innerText = `${andar}º`;
+          linha.appendChild(label);
+
+          const grid = document.createElement('div');
+          grid.className = 'unidades';
+
+          const unidadesDoAndar = porAndar[andar].sort((a, b) => a.Final - b.Final);
+          const selecionados = getStatusSelecionados();
+
+          unidadesDoAndar.forEach(u => {
+            const statusRaw = u.Status || 'indefinido';
+            const status = statusRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (!selecionados.includes(status)) return;
+
+            const div = document.createElement('div');
+            div.className = `card ${status}`;
+            div.style.position = 'relative';
+            div.innerHTML = `
+              <div class="card-content">
+                <strong>${u.Unidade}</strong><br>
+                ${u.Metragem?.toFixed(2)} m²<br>
+                R$ ${parseFloat(u.Valor || 0).toLocaleString('pt-BR')}
+              </div>
+              <div class="tooltip-popup">
+                <strong>Unidade:</strong> ${u.Unidade}<br>
+                <strong>Metragem:</strong> ${u.Metragem?.toFixed(2)} m²<br>
+                <strong>Valor:</strong> R$ ${parseFloat(u.Valor || 0).toLocaleString('pt-BR')}<br>
+                <strong>Link:</strong> <a href="${u.Link}" target="_blank">${u.Link}</a>
+              </div>
+            `;
+            grid.appendChild(div);
+          });
+
+          linha.appendChild(grid);
+          container.appendChild(linha);
+        });
+      } catch (err) {
+        console.error('Erro ao carregar espelho:', err);
+        alert('Erro ao carregar espelho de vendas');
+      }
+    }
+
+    function exportarParaPDF() {
+      const espelho = document.getElementById('container');
+      const opt = {
+        margin: 0.3,
+        filename: 'espelho_de_vendas.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(espelho).save();
+    }
+
+    document.addEventListener('click', function (e) {
+      const card = e.target.closest('.card');
+      const allPopups = document.querySelectorAll('.tooltip-popup');
+
+      // Se clicou fora de qualquer card, fecha todos
+      if (!card) {
+        allPopups.forEach(p => p.style.display = 'none');
+        return;
+      }
+
+      const popup = card.querySelector('.tooltip-popup');
+      if (!popup) return;
+
+      // Fecha todos os outros
+      allPopups.forEach(p => {
+        if (p !== popup) p.style.display = 'none';
+      });
+
+      // Toggle do atual
+      popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+    });
+
+    carregarEmpreendimentos();
+  </script>
+</body>
+</html>
