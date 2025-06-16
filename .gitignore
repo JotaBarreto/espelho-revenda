@@ -1,9 +1,0 @@
-# Arquivo de credenciais do Google
-credenciais.json
-
-# Cache e arquivos temporários
-__pycache__/
-*.pyc
-
-# Variáveis de ambiente
-.env
