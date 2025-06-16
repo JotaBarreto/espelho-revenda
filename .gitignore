@@ -1,0 +1,13 @@
+# Arquivos sensíveis e ambientes
+.env
+credenciais.json
+
+# Virtualenv
+venv/
+
+# Cache e compilados
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
