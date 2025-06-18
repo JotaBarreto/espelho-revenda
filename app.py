@@ -1,28 +1,31 @@
 from flask import Flask, jsonify, render_template
 import pandas as pd
 import gspread
+import os
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# Função para carregar as credenciais do arquivo local
+# Função para carregar as credenciais do ambiente
 def get_google_credentials():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    return ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    if not creds_json:
+        raise Exception("GOOGLE_CREDENTIALS_JSON não configurado no ambiente.")
+    creds_dict = json.loads(creds_json)
+    return ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 
 # Função para carregar os dados do Google Sheets
 def carregar_dados():
     credenciais = get_google_credentials()
-    
     cliente = gspread.authorize(credenciais)
     planilha = cliente.open_by_key("1LyhymqJ8QKezAiR8ZCidyO9w2hKejP7F-IMFlBGyMJ8")
     aba = planilha.worksheet("Espelho")
-       
     dados = aba.get_all_records()
     df = pd.DataFrame(dados)
-    
     return df
 
 @app.route('/api/empreendimentos')
