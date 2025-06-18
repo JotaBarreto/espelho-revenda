@@ -202,14 +202,14 @@
             div.innerHTML = `
               <div class="card-content">
                 <strong>${u.Unidade}</strong><br>
-                ${u.Metragem?.toFixed(2)} m²<br>
+                ${formatarComVirgula(u.Metragem)} m²<br>
                 R$ ${valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <div class="tooltip-popup">
                 <strong>Unidade:</strong> ${u.Unidade}<br>
                 <strong>Tipo:</strong> ${u.Tipo || '-'}<br>
                 <strong>Planta:</strong> ${u.Planta || '-'}<br>
-                <strong>Metragem:</strong> ${u.Metragem?.toFixed(2)} m²<br>
+                <strong>Metragem:</strong> <strong>Metragem:</strong> ${u.Metragem?.toString().replace('.', ',')} m²<br>
                 <strong>Valor:</strong> R$ ${valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}<br>
                 <strong>Link:</strong> <a href="${u.Link}" target="_blank">${u.Link}</a>
               </div>
@@ -236,6 +236,13 @@
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
       html2pdf().set(opt).from(espelho).save();
+    }
+
+    function formatarComVirgula(valor) {
+      if (!valor) return '0,00';
+      const str = valor.toString();
+      const len = str.length;
+      return `${str.slice(0, len - 2)},${str.slice(len - 2)}`;
     }
 
     document.addEventListener('click', function (e) {
