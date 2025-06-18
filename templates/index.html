@@ -23,7 +23,7 @@
       cursor: pointer;
     }
     .vendida { background-color: rgb(255, 51, 51); }
-    .negociacao { background-color: rgb(207, 207, 0); }
+    .negociacao { background-color: rgb(255, 123, 0); }
     .revenda { background-color: rgb(71, 180, 117); }
 
     .status-resumo {
@@ -45,7 +45,7 @@
       border-radius: 4px;
     }
     .status-vendida { background-color: rgb(255, 51, 51); }
-    .status-negociacao { background-color: rgb(207, 207, 0); }
+    .status-negociacao { background-color: rgb(255, 123, 0); }
     .status-revenda { background-color: rgb(71, 180, 117); }
 
     .tooltip-popup {
@@ -133,8 +133,6 @@
           carregarEspelho(select.value);
         });
       });
-
-      // carregarEspelho(lista[0]);
     }
 
     function getStatusSelecionados() {
@@ -196,18 +194,23 @@
             const div = document.createElement('div');
             div.className = `card ${status}`;
             div.style.position = 'relative';
+
+            const valorNumerico = Number(
+              String(u.Valor).replace(/\./g, '').replace(',', '.')
+            );
+
             div.innerHTML = `
               <div class="card-content">
                 <strong>${u.Unidade}</strong><br>
                 ${u.Metragem?.toFixed(2)} m²<br>
-                R$ ${parseFloat(u.Valor || 0).toLocaleString('pt-BR')}
+                R$ ${valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <div class="tooltip-popup">
                 <strong>Unidade:</strong> ${u.Unidade}<br>
                 <strong>Tipo:</strong> ${u.Tipo || '-'}<br>
                 <strong>Planta:</strong> ${u.Planta || '-'}<br>
                 <strong>Metragem:</strong> ${u.Metragem?.toFixed(2)} m²<br>
-                <strong>Valor:</strong> R$ ${parseFloat(u.Valor || 0).toLocaleString('pt-BR')}<br>
+                <strong>Valor:</strong> R$ ${valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}<br>
                 <strong>Link:</strong> <a href="${u.Link}" target="_blank">${u.Link}</a>
               </div>
             `;

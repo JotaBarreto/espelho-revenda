@@ -10,13 +10,26 @@ app = Flask(__name__)
 CORS(app)
 
 # Função para carregar as credenciais do ambiente
+#def get_google_credentials():
+#    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+#    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+#    if not creds_json:
+#        raise Exception("GOOGLE_CREDENTIALS_JSON não configurado no ambiente.")
+#    creds_dict = json.loads(creds_json)
+#    return ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
 def get_google_credentials():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    if not creds_json:
-        raise Exception("GOOGLE_CREDENTIALS_JSON não configurado no ambiente.")
-    creds_dict = json.loads(creds_json)
-    return ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
+    cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+
+    if cred_json_str:
+        print("Usando credenciais da variável de ambiente.")
+        creds_dict = json.loads(cred_json_str)
+        return ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    
+    print("Usando credenciais do arquivo credenciais.json.")
+    return ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
 
 # Função para carregar os dados do Google Sheets
 def carregar_dados():
