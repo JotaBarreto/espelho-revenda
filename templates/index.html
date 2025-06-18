@@ -195,7 +195,7 @@
             div.className = `card ${status}`;
             div.style.position = 'relative';
 
-            const valorNumerico = Number(
+            const valorNumerico =  Number(
               String(u.Valor).replace(/\./g, '').replace(',', '.')
             );
 
@@ -203,7 +203,7 @@
               <div class="card-content">
                 <strong>${u.Unidade}</strong><br>
                 ${formatarComVirgula(u.Metragem)} m²<br>
-                R$ ${valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                ${formatarMoeda(u.Valor)}
               </div>
               <div class="tooltip-popup">
                 <strong>Unidade:</strong> ${u.Unidade}<br>
@@ -244,6 +244,14 @@
       const len = str.length;
       return `${str.slice(0, len - 2)},${str.slice(len - 2)}`;
     }
+
+    function formatarMoeda(valorStr) {
+      if (!valorStr) return 'R$ 0,00';
+      const limpo = valorStr.toString().replace(/[^\d]/g, '');  // Remove tudo que não for número
+      const valor = parseInt(limpo) / 100;  // Divide por 100 para ajustar a vírgula
+      return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
 
     document.addEventListener('click', function (e) {
       const card = e.target.closest('.card');
